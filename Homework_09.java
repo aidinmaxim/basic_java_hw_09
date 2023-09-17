@@ -1,6 +1,5 @@
 package homeworks.homework_09;
 
-import java.util.HashMap;
 import java.util.Scanner;
 
 /**
@@ -12,9 +11,9 @@ import java.util.Scanner;
 public class Homework_09 {
 
     private static final int[] DENOMINATIONS = {5, 10, 20, 50, 100, 200};
-    //    private static int[] counts = {0, 0, 0, 0, 0, 0};
-    private static int[] counts = {1, 0, 30, 23, 0, 1}; // Sum: 1955
-    private static int deposit = 0;
+    private static int[] counts = {1, 0, 30, 23, 0, 1};
+    private static double deposit = 0;
+    private static double balance = 1945;
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -23,7 +22,7 @@ public class Homework_09 {
         while (true) {
 
             printMenu();
-            int command = getUserInput(scanner);
+            int command = getIntFromUserInput(scanner);
 
             switch (command) {
                 case 1:
@@ -39,7 +38,7 @@ public class Homework_09 {
                     break;
 
                 case 4:
-                    putMoneyOnDeposit();
+                    putMoneyOnDeposit(scanner);
                     break;
 
                 case 0:
@@ -57,28 +56,43 @@ public class Homework_09 {
         System.out.println("1. Получить деньги");
         System.out.println("2. Внести деньги");
         System.out.println("3. Проверить баланс");
+        System.out.println("4. Открыть депозит");
         System.out.println("0. Завершить работу");
     }
 
-    private static int getUserInput(Scanner scanner) {
-
+    private static double getDoubleFromUserInput(Scanner scanner) {
+        double result;
         while (true) {
-            String userInput = scanner.next();
+            String input = scanner.nextLine();
 
-            if (!userInput.matches("\\d+") || Integer.parseInt(userInput) < 0) {
-                System.err.println("Недопустимый ввод. Повторите попытку.");
-            } else {
-                return Integer.parseInt(userInput);
+            try {
+                result = Double.parseDouble(input);
+                return result;
+            } catch (NumberFormatException e) {
+                System.err.println("Ошибка: Введите допустимое число.");
+            }
+        }
+    }
+
+    private static int getIntFromUserInput(Scanner scanner) {
+        int result;
+        while (true) {
+            String input = scanner.nextLine();
+
+            try {
+                result = Integer.parseInt(input);
+                return result;
+            } catch (NumberFormatException e) {
+                System.err.println("Ошибка: Введите допустимое число.");
             }
         }
     }
 
     private static void withdrawMoney(Scanner scanner) {
         System.out.println("Получение денег");
-        int requestedAmount = getUserInput(scanner);
-        int sum = calculateBalance();
+        int requestedAmount = getIntFromUserInput(scanner);
 
-        if (requestedAmount > sum) {
+        if (requestedAmount > balance) {
             System.err.println("Недостаточно денег на счете");
             return;
         }
@@ -115,7 +129,7 @@ public class Homework_09 {
             System.out.println("Не удается выдать запрошенную сумму. Желаете снять: " + dispensedSum + " EUR?");
 
             System.out.println("Продолжить? (1 - Да, 0 - Отменить)");
-            int confirmTransaction = getUserInput(scanner);
+            int confirmTransaction = getIntFromUserInput(scanner);
             if (confirmTransaction != 1) {
                 System.out.println("Транзакция отменена.");
 
@@ -123,26 +137,31 @@ public class Homework_09 {
             }
 
             counts = tmpCounts;
+            balance -= dispensedSum;
             System.out.println(withdrawMoneyMessage);
         }
 
-        System.out.println("--> Остаток на счету: " + calculateBalance() + " EUR");
+        System.out.println("--> Остаток на счету: " + balance + " EUR");
     }
 
     private static void putMoney(Scanner scanner) {
         System.out.println("Внесение денег");
 
+        int money = 0;
         for (int i = 0; i < DENOMINATIONS.length; i++) {
             System.out.println("Введите количество купюр, номинала " + DENOMINATIONS[i]);
-            int newBanknotes = getUserInput(scanner);
+            int newBanknotes = getIntFromUserInput(scanner);
             counts[i] += newBanknotes;
+            money += newBanknotes * DENOMINATIONS[i];
             System.out.println("--> Вы положили на счет " + newBanknotes + " купюр номиналом " + DENOMINATIONS[i] + " EUR");
         }
+        balance += money;
     }
 
     private static void checkBalance() {
         System.out.println("Проверка баланса");
-        System.out.println("--> Ваш баланс равен: " + calculateBalance() + " EUR");
+        System.out.println("--> Ваш баланс равен: " + balance + " EUR");
+        System.out.println("--> Ваш баланс дипозитного счета: " + deposit + " EUR");
     }
 
     private static void exitATM() {
@@ -150,16 +169,36 @@ public class Homework_09 {
         System.exit(0);
     }
 
-    private static int calculateBalance() {
-        int balance = 0;
-        for (int i = 0; i < DENOMINATIONS.length; i++) {
-            balance += DENOMINATIONS[i] * counts[i];
+    private static void putMoneyOnDeposit(Scanner scanner) {
+        System.out.println("Введите сумму которую хотите положить на депозит");
+        double moneyForDeposit = getDoubleFromUserInput(scanner);
+
+        if (moneyForDeposit > balance) {
+            System.err.println("Недостаточно денег на счете");
+
+            return;
         }
 
-        return balance;
+        balance -= moneyForDeposit;
+        deposit += moneyForDeposit;
+
+        System.out.println("Введите процент на депозите (годовой):");
+        double annualInterestRate = getDoubleFromUserInput(scanner);
+
+        calculateDepositEarnings(balance, deposit, annualInterestRate);
     }
 
-    private static void putMoneyOnDeposit() {
+    private static void calculateDepositEarnings(double balance, double depositAmount, double annualInterestRate) {
+        // проценты по сложной процентной ставке
+        double monthlyInterestRate = annualInterestRate / 12 / 100;
+        System.out.printf("Месячная ставка: %.4f%%%n", monthlyInterestRate * 100);
 
+        for (int month = 1; month <= 5; month++) {
+            double interestEarned = depositAmount * monthlyInterestRate;
+            depositAmount += interestEarned;
+            balance += interestEarned;
+
+            System.out.printf("Месяц %d: Начисления - %.2f Баланс - %.2f%n", month, interestEarned, balance);
+        }
     }
 }
